@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        @keyframes disappear {
+            from{
+                opacity:1;
+            }
+            to{
+                opacity: 0;
+            }
+        }
+        *{
+          font-family: monospace;  
+        }
+        body{
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap:30px;
+            background-color: black;
+        }
+        button, textarea, input{
+            background-color: white;
+            color: black;
+            border: 1px solid white;
+        }
+        span{
+            color: white;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+        .post, .postEdit, .newPost, .notif{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid white;
+            padding: 10px;
+        }
+        .post, .newPost{  
+            width: 200px;
+        }
+        #left{
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 20%;
+        }
+        #posts{
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+           flex-wrap: wrap;
+        }
+        #notifications{
+            position: absolute;
+            flex-direction: column;
+            justify-content: flex-end;
+            max-width: 200px;
+            display: none;
+            right: 20px;
+            bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <section id="left">
+        <button id="logreg">Log In/Sign Up</button>
+        <button id="getUsers">Get Users</button>
+        <button id="createPost">Create Post</button>
+        <span id="users"></span>
+    </section>
+    <section id="posts"></section>
+    <div id="notifications"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="indexscript.js"></script>
+</body>
+</html>
