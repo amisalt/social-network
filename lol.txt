@@ -1,4 +1,0 @@
-npm i express mongoose
-npm i bcryptjs
-npm i jsonwebtoken
-npm i express-validator
