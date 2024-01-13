@@ -9,13 +9,17 @@ router.post("/newComment", [
     authCheck
 ], controller.newComment)
 
-router.post("editComment", [
+router.post("/editComment", [
     check("text", "Add text to your comment").notEmpty(),
     authCheck
 ], controller.editComment)
 
-router.post("deleteComment", [
+router.post("/deleteComment", [
     authCheck
 ], controller.deleteComment)
+
+router.get("/getComments", [
+    authCheck
+], controller.getComments)
 
 module.exports = router
