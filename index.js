@@ -9,12 +9,14 @@ const {Server} = require("socket.io")
 const io = new Server(server)
 const authRouter = require("./authRouter.js")
 const postRouter = require("./postRouter.js")
+const commentRouter = require("./commentRouter.js")
 
 app.use(express.json())
 app.use(express.static("public"))
 app.use(express.urlencoded())
 app.use("/auth", authRouter)
 app.use("/post", postRouter)
+app.use("/comment", commentRouter)
 
 const start = async ()=>{
     try{
