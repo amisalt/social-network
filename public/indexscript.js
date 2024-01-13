@@ -50,12 +50,8 @@ createPost.addEventListener("click", ()=>{
                     leftBlock.removeChild(newPost)
                     await getPosts()
                     let post = document.querySelectorAll(".post")
-                    post = post[post.length-1].innerHTML.slice(0,54)
-                    post = post.replace("</span>","")
-                    post = post.split("<span>")
-                    post.shift()
-                    post[1] = post[1].replace("</span>","")
-                    console.log(post);
+                    post = post[post.length-1].innerHTML
+                    post = post.slice(0,post.length-61).replaceAll("<span>", "").split("</span>")
                     socket.emit("newPost", JSON.stringify({"content":post}))
                     socket.emit("reload")
                 }else{
@@ -75,83 +71,85 @@ function createPostBlock(data){
     token = localStorage.getItem("token")
     const post = document.createElement("div")
     post.classList.add("post")
-    const author = document.createElement("span")
-    author.textContent = data.author
+    post.innerHTML += `<span>${data.post.author}</span>`
     const text = document.createElement("span")
-    text.textContent = data.text
-    const date = document.createElement("span")
-    date.textContent = data.date
-    const deleteB = document.createElement("button")
-    deleteB.textContent = "delete post"
-    const editB = document.createElement("button")
-    editB.textContent = "edit post"
-    editB.addEventListener("click",()=>{
-        const editPost = document.createElement("div")
-        editPost.classList.add("postEdit")
-        const win = document.createElement("textarea")
-        const submit = document.createElement("button")
-        submit.textContent = "submit"
-        submit.addEventListener("click",async ()=>{
-            if(win.value){
-                await fetch("http://localhost:8000/post/editPost",{
-                    method:"POST",
-                    headers:{
-                        "Content-Type":"application/json",
-                        "Authorization":`Bearer ${token}`
-                    },
-                    body:JSON.stringify({
-                        "postAuthor":author.textContent,
-                        "postText":text.textContent,
-                        "postDate":date.textContent,
-                        "text":win.value
-                    })
-                }).then(res => res.json())
-                .then(res =>{
-                    if(res.message === "Post successfully edited"){
-                        text.textContent = win.value
-                        post.removeChild(editPost)
-                        socket.emit("reload")
-                    }else{
-                        const error = document.createElement("span")
-                        error.textContent = res.message
-                        editPost.append(error)
-                    }
+    text.textContent = data.post.text
+    post.append(text)
+    let datetime = new Date(data.post.date)
+    post.innerHTML += `<span>${datetime.getHours()>10 ? datetime.getHours() : `0${datetime.getHours()}`}:${datetime.getMinutes()>10 ? datetime.getMinutes() : `0${datetime.getMinutes()}`} ${datetime.getDate()}.${datetime.getMonth()+1}.${datetime.getFullYear()}`
+    if(data.owner || data.admin){
+        const deleteB = document.createElement("button")
+        deleteB.textContent = "delete post"
+        deleteB.addEventListener("click", async()=>{
+            await fetch("http://localhost:8000/post/deletePost",{
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Authorization":`Bearer ${token}`
+                },
+                body:JSON.stringify({
+                    "author":data.post.author,
+                    "text":data.post.text,
+                    "date":data.post.date
                 })
-            }
-        })
-        editPost.append(win,submit)
-        post.append(editPost)
-    })
-    deleteB.addEventListener("click", async()=>{
-        await fetch("http://localhost:8000/post/deletePost",{
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json",
-                "Authorization":`Bearer ${token}`
-            },
-            body:JSON.stringify({
-                "author":author.textContent,
-                "text":text.textContent,
-                "date":date.textContent
+            }).then(res => res.json())
+            .then(res =>{
+                if(res.message === "Post successfully deleted"){
+                    socket.emit("reload")
+                }else{
+                    const error = document.createElement("span")
+                    error.textContent = res.message
+                    post.append(error)
+                }
             })
-        }).then(res => res.json())
-        .then(res =>{
-            if(res.message === "Post successfully deleted"){
-                postBlock.removeChild(post)
-                socket.emit("reload")
-            }else{
-                const error = document.createElement("span")
-                error.textContent = res.message
-                post.append(error)
-            }
         })
-    })
-    post.append(author,text,date,deleteB,editB)
+        post.append(deleteB)
+    }
+    if(data.owner){
+        const editB = document.createElement("button")
+        editB.textContent = "edit post"
+        editB.addEventListener("click",()=>{
+            const editPost = document.createElement("div")
+            editPost.classList.add("postEdit")
+            const win = document.createElement("textarea")
+            win.value = data.post.text
+            const submit = document.createElement("button")
+            submit.textContent = "submit"
+            submit.addEventListener("click",async ()=>{
+                if(win.value){
+                    await fetch("http://localhost:8000/post/editPost",{
+                        method:"POST",
+                        headers:{
+                            "Content-Type":"application/json",
+                            "Authorization":`Bearer ${token}`
+                        },
+                        body:JSON.stringify({
+                            "postAuthor":data.post.author,
+                            "postText":data.post.text,
+                            "postDate":data.post.date,
+                            "text":win.value
+                        })
+                    }).then(res => res.json())
+                    .then(res =>{
+                        if(res.message == "Post successfully edited"){
+                            socket.emit("reload")
+                        }else{
+                            const error = document.createElement("span")
+                            error.textContent = res.message
+                            editPost.append(error)
+                        }
+                    })
+                }
+            })
+            editPost.append(win,submit)
+            post.append(editPost)
+        })
+        post.append(editB)
+    }
     postBlock.append(post)
 }
 
 function createPopUp(array){
-    console.log(array);
     let data = JSON.parse(array)
     data = data.content
     const notif = document.createElement("div")
@@ -196,5 +194,4 @@ socket.on("newPostMessage", data=>{
 })
 socket.on("reloadServer", ()=>{
     getPosts()
-    console.log("reload");
 })

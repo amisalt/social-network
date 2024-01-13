@@ -34,7 +34,7 @@
             word-break: break-all;
             word-wrap: break-word;
         }
-        .post, .postEdit, .newPost, .notif{
+        .post, .postEdit, .newPost, .notif, .comment, .commentBlock{
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -56,7 +56,8 @@
             display: flex;
             flex-direction: row;
             gap: 10px;
-           flex-wrap: wrap;
+            flex-wrap: wrap;
+            align-items: flex-start;
         }
         #notifications{
             position: absolute;

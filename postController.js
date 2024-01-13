@@ -1,8 +1,7 @@
 const User = require("./models/User")
 const Post = require("./models/Post")
+const Comment = require("./models/Comment")
 const {validationResult} = require("express-validator")
-const jwt = require("jsonwebtoken")
-const {secret} = require("./config")
 
 class PostController{
     async newPost(req,res){
@@ -32,7 +31,7 @@ class PostController{
                 return res.status(400).json({"message":"User is not author of the post"})
             }
             const post = await Post.findOne({"author":authorUser._id, "text":postText, "date":postDate})
-            if (post.deleted){
+            if (!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
             post.text = text
@@ -51,11 +50,11 @@ class PostController{
                 return res.status(400).json({"message":"User is not author of the post"})
             }
             const post = await Post.findOne({"author":authorUser._id,text,date})
-            if (post.deleted){
+            if (!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
-            post.deleted = true
-            await post.save()
+            await Comment.find({"post":post._id})
+            await Post.findByIdAndDelete(post._id)
             res.json({message:"Post successfully deleted"})
         }catch(e){
             console.log(e);
@@ -64,17 +63,24 @@ class PostController{
     }
     async getPosts(req,res){
         try{
-            const posts = await Post.find({"deleted":false})
+            let currentUserId = req.user.id
+            const currentUser = await User.findById(currentUserId)
+            const admin = currentUser.roles.includes("ADMIN")
+            const posts = await Post.find()
             const authors = {}
             for(let i = 0; i<posts.length; i++){
                 authors[posts[i].author] = ""
             }
             for(let author of Object.keys(authors)){
                 let user = await User.findById(author)
-                authors[author] = user.username
+                authors[author] = [user.username]
+                if(user._id == currentUserId) authors[author].push(1)
+                else authors[author].push(0)
             }
             for(let i = 0; i<posts.length; i++){
-                posts[i].author = authors[posts[i].author]
+                let author = authors[posts[i].author]
+                posts[i].author = author[0]
+                posts[i] = {post:posts[i], owner:author[1], admin}
             }
             res.json(posts)
         }catch(e){

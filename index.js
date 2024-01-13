@@ -25,11 +25,10 @@ const start = async ()=>{
         io.on("connection", (socket)=>{
             console.log(`user connected ${socket.id}`);
             socket.on("newPost", (data)=>{
-                console.log(data);
                 socket.broadcast.emit("newPostMessage",data)
             })
             socket.on("reload", ()=>{
-                socket.broadcast.emit("reloadServer")
+                io.emit("reloadServer")
             })
         })
         app.get("/", (req,res)=>{
