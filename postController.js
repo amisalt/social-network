@@ -53,7 +53,10 @@ class PostController{
             if (!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
-            await Comment.find({"post":post._id})
+            const related_comments = await Comment.find({"post":post._id})
+            for(comment of related_comments){
+                await Comment.findByIdAndDelete(comment._id)
+            }
             await Post.findByIdAndDelete(post._id)
             res.json({message:"Post successfully deleted"})
         }catch(e){
@@ -80,7 +83,8 @@ class PostController{
             for(let i = 0; i<posts.length; i++){
                 let author = authors[posts[i].author]
                 posts[i].author = author[0]
-                posts[i] = {post:posts[i], owner:author[1], admin}
+                const comments = await Comment.find({"post":posts[i]._id})
+                posts[i] = {post:posts[i], owner:author[1], admin, comments}
             }
             res.json(posts)
         }catch(e){
