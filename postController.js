@@ -83,7 +83,16 @@ class PostController{
             for(let i = 0; i<posts.length; i++){
                 let author = authors[posts[i].author]
                 posts[i].author = author[0]
-                const comments = await Comment.find({"post":posts[i]._id})
+                const comments = await fetch(""http://localhost:8000/comment/getComments",{
+                    method:"GET",
+                    headers:{
+                        "Content-Type":"application/json",
+                        "Authorization":req.headers.authorization.split(" ")[1]
+                    }
+                }).then(res=>res.json()).then(res=>{
+                    
+                })
+                
                 posts[i] = {post:posts[i], owner:author[1], admin, comments}
             }
             res.json(posts)
