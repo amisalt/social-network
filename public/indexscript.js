@@ -146,6 +146,28 @@ function createPostBlock(data){
         })
         post.append(editB)
     }
+    const commB = document.createElement("button")
+    commB.textContent = `view comments (${data.comments.length})`
+    const div = document.createElement("div")
+    div.style.display = "none"
+    const commBlock = document.createElement("div")
+    commBlock.classList.add(commentBlock)
+    const commAddT = document.createElement("textarea")
+    const commAddB = document.createElement("button")
+    commAddB.textContent = "add comment"
+    div.append(commAddB)
+    commB.addEventListener("click",()=>{
+        if(commBlock.style.display == "none"){
+            commB.textContent = "hide comments ↑"
+            div.style.display = "none"
+            
+        }else{
+            commB.textContent = `view comments (${data.comments.length}) ↓`
+            div.style.display = "none"
+        }
+    })
+
+    post.append(commB, div)
     postBlock.append(post)
 }
 
