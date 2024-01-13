@@ -61,6 +61,12 @@ class CommentController{
             if(!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
+            const comment = await Comment.findOne({author,text,date,post._id})
+            if(!comment){
+                return res.status(400).json({"message":"Comment is not existing"})
+            }
+            await Comment.findByIdAndDelete(comment._id)
+            res.json({"message":"Comment successfully deleted"})
         }catch(e){
             console.log(e);
             res.status(400).json({message:"Unhandled error", e})
