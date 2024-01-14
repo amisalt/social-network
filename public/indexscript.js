@@ -247,12 +247,15 @@ function createCommentBlockBase(data){
             commB.textContent = "hide comments ↑"
             div.style.display = "flex"
             if(data.comments.length > 0){
-                for(let comment of data.comments) commBlock.append(createCommentBase(comment, data.post._id))
+                if(!commBlock.innerHTML)
+                    for(let comment of data.comments) commBlock.append(createCommentBase(comment, data.post._id))
             }else{
                 commBlock.style.display = "none"
             }
             commAddB.addEventListener("click", async(e)=>{
                 if(commAddT.value){
+                    let text = commAddT.value
+                    commAddT.value = ""
                     await fetch("http://localhost:8000/comment/newComment",{
                         method:"POST",
                         headers:{
@@ -260,11 +263,12 @@ function createCommentBlockBase(data){
                             "Authorization":`Bearer ${token}`
                         },
                         body:JSON.stringify({
-                            "text":commAddT.value,
+                            text,
                             "postID":data.post._id
                         })
                     }).then(res => res.json()).then(async res => {
                         if(res.message === "Comment successfully created"){
+                            
                             socket.emit("reload")
                         }else{
                             const error = document.createElement("span")
