@@ -25,14 +25,13 @@ class PostController{
             if(!errors.isEmpty()){
                 return res.status(400).json({"message":"Creating post error"})
             }
-            const {text, postAuthor, postText, postDate} = req.body
-            const authorUser = await User.findOne({"username":postAuthor})
-            if(req.user.id != authorUser._id){
-                return res.status(400).json({"message":"User is not author of the post"})
-            }
-            const post = await Post.findOne({"author":authorUser._id, "text":postText, "date":postDate})
+            const {text, postID} = req.body
+            const post = await Post.findById(postID)
             if (!post){
                 return res.status(400).json({"message":"Post is not existing"})
+            }
+            if(req.user.id != post.author){
+                return res.status(400).json({"message":"User is not author of the post"})
             }
             post.text = text
             await post.save()
@@ -44,15 +43,14 @@ class PostController{
     }
     async deletePost(req,res){
         try{
-            const {author,text,date} = req.body
-            const authorUser = await User.findOne({"username":author})
-            if(req.user.id != authorUser._id && !req.user.roles.includes("ADMIN")){
-                return res.status(400).json({"message":"User is not author of the post"})
-            }
-            const post = await Post.findOne({"author":authorUser._id,text,date})
+            const {postID} = req.body
+            const post = await Post.findById(postID)
             if (!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
+            if(req.user.id != post.author && !req.user.roles.includes("ADMIN")){
+                return res.status(400).json({"message":"User is not author of the post"})
+            }            
             const related_comments = await Comment.find({"post":post._id})
             for(comment of related_comments){
                 await Comment.findByIdAndDelete(comment._id)
@@ -83,15 +81,17 @@ class PostController{
             for(let i = 0; i<posts.length; i++){
                 let author = authors[posts[i].author]
                 posts[i].author = author[0]
-                const comments = await fetch(""http://localhost:8000/comment/getComments",{
-                    method:"GET",
+
+                const comments = await fetch("http://localhost:8000/comment/getComments",{
+                    method:"POST",
                     headers:{
                         "Content-Type":"application/json",
-                        "Authorization":req.headers.authorization.split(" ")[1]
-                    }
-                }).then(res=>res.json()).then(res=>{
-                    
-                })
+                        "Authorization":req.headers.authorization
+                    },
+                    body:JSON.stringify({
+                        "postID":posts[i]._id
+                    })
+                }).then(res=>res.json())
                 
                 posts[i] = {post:posts[i], owner:author[1], admin, comments}
             }

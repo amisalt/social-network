@@ -10,8 +10,8 @@ class CommentController{
             if(!errors.isEmpty()){
                 return res.status(400).json({"message":"Creating comment error"})
             }
-            const {text, postAuthor, postText, postDate} = req.body
-            const post = await Post.findOne({"author":postAuthor, "text":postText, "date":postDate})
+            const {text, postID} = req.body
+            const post = await Post.findById(postID)
             if(!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
@@ -29,18 +29,17 @@ class CommentController{
             if(!errors.isEmpty()){
                 return res.status(400).json({"message":"Creating comment error"})
             }
-            const {text, postAuthor, postText, postDate, commentAuthor, commentText, commentDate} = req.body
-            const authorUser = await User.findOne({"username":commentAuthor})
-            if(!authorUser._id == req.user.id){
-                return res.status(400).json({"message":"User is not author of the comment"})
-            }
-            const post = await Post.findOne({"author":postAuthor, "text":postText, "date":postDate})
+            const {text, postID, commentID} = req.body
+            const post = await Post.findById(postID)
             if(!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
-            const comment = await Comment.findOne({"author":commentAuthor, "text":commentText, "date":commentDate, "post":post._id})
+            const comment = await Comment.findById(commentID)
             if(!comment){
                 return res.status(400).json({"message":"Comment is not existing"})
+            }
+            if(!comment.author == req.user.id){
+                return res.status(400).json({"message":"User is not author of the comment"})
             }
             comment.text = text
             await comment.save()
@@ -52,18 +51,17 @@ class CommentController{
     }
     async deleteComment(req,res){
         try{
-            const {author, text, date, postText, postDate, postAuthor} = req.body
-            const authorUser = await User.findOne({"username":commentAuthor})
-            if(!authorUser._id == req.user.id && !req.user.roles.includes("ADMIN")){
-                return res.status(400).json({"message":"User is not author of the comment"})
-            }
-            const post = await Post.findOne({"author":postAuthor,"text":postText,"date":postDate})
+            const {commentID, postID} = req.body
+            const post = await Post.findById(postID)
             if(!post){
                 return res.status(400).json({"message":"Post is not existing"})
             }
-            const comment = await Comment.findOne({author,text,date,post._id})
+            const comment = await Comment.findById(commentID)
             if(!comment){
                 return res.status(400).json({"message":"Comment is not existing"})
+            }
+            if(!comment.author == req.user.id && !req.user.roles.includes("ADMIN")){
+                return res.status(400).json({"message":"User is not author of the comment"})
             }
             await Comment.findByIdAndDelete(comment._id)
             res.json({"message":"Comment successfully deleted"})
@@ -74,7 +72,31 @@ class CommentController{
     }
     async getComments(req,res){
         try{
-            
+            let currentUserId = req.user.id
+            const {postID} = req.body
+            const post = await Post.findById(postID)
+            if(!post){
+                return res.status(400).json({"message":"Post is not existing"})
+            }
+            const currentUser = await User.findById(currentUserId)
+            const admin = currentUser.roles.includes("ADMIN")
+            const comments = await Comment.find({"post":post._id})
+            const authors = {}
+            for(let i = 0; i<comments.length; i++){
+                authors[comments[i].author] = ""
+            }
+            for(let author of Object.keys(authors)){
+                let user = await User.findById(author)
+                authors[author] = [user.username]
+                if(user._id == currentUserId) authors[author].push(1)
+                else authors[author].push(0)
+            }
+            for(let i = 0; i<comments.length; i++){
+                let author = authors[comments[i].author]
+                comments[i].author = author[0]
+                comments[i] = {post:comments[i], owner:author[1], admin}
+            }
+            res.json(comments)
         }catch(e){
             console.log(e);
             res.status(400).json({message:"Unhandled error", e})

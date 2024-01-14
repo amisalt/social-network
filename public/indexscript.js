@@ -67,7 +67,7 @@ createPost.addEventListener("click", ()=>{
 })
 
 
-function createPostBlock(data){
+function createPostBase(data){
     token = localStorage.getItem("token")
     const post = document.createElement("div")
     post.classList.add("post")
@@ -80,7 +80,8 @@ function createPostBlock(data){
     if(data.owner || data.admin){
         const deleteB = document.createElement("button")
         deleteB.textContent = "delete post"
-        deleteB.addEventListener("click", async()=>{
+        deleteB.addEventListener("click", async(e)=>{
+            e.stopPropagation()
             await fetch("http://localhost:8000/post/deletePost",{
                 method:"POST",
                 headers:{
@@ -88,9 +89,7 @@ function createPostBlock(data){
                     "Authorization":`Bearer ${token}`
                 },
                 body:JSON.stringify({
-                    "author":data.post.author,
-                    "text":data.post.text,
-                    "date":data.post.date
+                    "postID":data.post._id
                 })
             }).then(res => res.json())
             .then(res =>{
@@ -108,14 +107,16 @@ function createPostBlock(data){
     if(data.owner){
         const editB = document.createElement("button")
         editB.textContent = "edit post"
-        editB.addEventListener("click",()=>{
+        editB.addEventListener("click",(e)=>{
+            e.stopPropagation()
             const editPost = document.createElement("div")
             editPost.classList.add("postEdit")
             const win = document.createElement("textarea")
             win.value = data.post.text
             const submit = document.createElement("button")
             submit.textContent = "submit"
-            submit.addEventListener("click",async ()=>{
+            submit.addEventListener("click",async (e)=>{
+                e.stopPropagation()
                 if(win.value){
                     await fetch("http://localhost:8000/post/editPost",{
                         method:"POST",
@@ -124,9 +125,7 @@ function createPostBlock(data){
                             "Authorization":`Bearer ${token}`
                         },
                         body:JSON.stringify({
-                            "postAuthor":data.post.author,
-                            "postText":data.post.text,
-                            "postDate":data.post.date,
+                            "postID":data.post._id,
                             "text":win.value
                         })
                     }).then(res => res.json())
@@ -146,28 +145,148 @@ function createPostBlock(data){
         })
         post.append(editB)
     }
+    return post
+}
+
+
+function createCommentBase(data, postID){
+    token = localStorage.getItem("token")
+    const post = document.createElement("div")
+    post.classList.add("comment")
+    post.innerHTML += `<span>${data.post.author}</span>`
+    const text = document.createElement("span")
+    text.textContent = data.post.text
+    post.append(text)
+    let datetime = new Date(data.post.date)
+    post.innerHTML += `<span>${datetime.getHours()>10 ? datetime.getHours() : `0${datetime.getHours()}`}:${datetime.getMinutes()>10 ? datetime.getMinutes() : `0${datetime.getMinutes()}`} ${datetime.getDate()}.${datetime.getMonth()+1}.${datetime.getFullYear()}`
+    if(data.owner || data.admin){
+        const deleteB = document.createElement("button")
+        deleteB.textContent = "delete comment"
+        deleteB.addEventListener("click", async(e)=>{
+            await fetch("http://localhost:8000/comment/deleteComment",{
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Authorization":`Bearer ${token}`
+                },
+                body:JSON.stringify({
+                    "commentID":data.post._id,
+                    postID
+                })
+            }).then(res => res.json())
+            .then(res =>{
+                if(res.message === "Comment successfully deleted"){
+                    socket.emit("reload")
+                }else{
+                    const error = document.createElement("span")
+                    error.textContent = res.message
+                    post.append(error)
+                }
+            })
+        })
+        post.append(deleteB)
+    }
+    if(data.owner){
+        const editB = document.createElement("button")
+        editB.textContent = "edit comment"
+        editB.addEventListener("click",(e)=>{
+            const editPost = document.createElement("div")
+            editPost.classList.add("postEdit")
+            const win = document.createElement("textarea")
+            win.value = data.post.text
+            const submit = document.createElement("button")
+            submit.textContent = "submit"
+            submit.addEventListener("click",async (e)=>{
+                if(win.value){
+                    await fetch("http://localhost:8000/comment/editComment",{
+                        method:"POST",
+                        headers:{
+                            "Content-Type":"application/json",
+                            "Authorization":`Bearer ${token}`
+                        },
+                        body:JSON.stringify({
+                            postID,
+                            "text":win.value,
+                            "commentID":data.post._id
+                        })
+                    }).then(res => res.json())
+                    .then(res =>{
+                        if(res.message == "Comment successfully edited"){
+                            socket.emit("reload")
+                        }else{
+                            const error = document.createElement("span")
+                            error.textContent = res.message
+                            editPost.append(error)
+                        }
+                    })
+                }
+            })
+            editPost.append(win,submit)
+            post.append(editPost)
+        })
+        post.append(editB)
+    }
+    return post
+}
+
+
+function createCommentBlockBase(data){
     const commB = document.createElement("button")
-    commB.textContent = `view comments (${data.comments.length})`
+    commB.textContent = `view comments (${data.comments.length}) ↓`
     const div = document.createElement("div")
     div.style.display = "none"
+    div.classList.add("flexColumn")
     const commBlock = document.createElement("div")
-    commBlock.classList.add(commentBlock)
+    commBlock.classList.add("flexColumn")
     const commAddT = document.createElement("textarea")
     const commAddB = document.createElement("button")
     commAddB.textContent = "add comment"
-    div.append(commAddB)
-    commB.addEventListener("click",()=>{
-        if(commBlock.style.display == "none"){
+    div.append(commBlock, commAddT, commAddB, )
+    commB.addEventListener("click",(e)=>{
+        if(div.style.display == "none"){
             commB.textContent = "hide comments ↑"
-            div.style.display = "none"
+            div.style.display = "flex"
+            if(data.comments.length > 0){
+                for(let comment of data.comments) commBlock.append(createCommentBase(comment, data.post._id))
+            }else{
+                commBlock.style.display = "none"
+            }
+            commAddB.addEventListener("click", async(e)=>{
+                if(commAddT.value){
+                    await fetch("http://localhost:8000/comment/newComment",{
+                        method:"POST",
+                        headers:{
+                            "Content-Type":"application/json",
+                            "Authorization":`Bearer ${token}`
+                        },
+                        body:JSON.stringify({
+                            "text":commAddT.value,
+                            "postID":data.post._id
+                        })
+                    }).then(res => res.json()).then(async res => {
+                        if(res.message === "Comment successfully created"){
+                            socket.emit("reload")
+                        }else{
+                            const error = document.createElement("span")
+                            error.textContent = res.message
+                            div.append(error)
+                        }
+                    })
+                }
+            })
             
         }else{
             commB.textContent = `view comments (${data.comments.length}) ↓`
             div.style.display = "none"
         }
     })
+    return [commB, div]
+}
 
-    post.append(commB, div)
+
+function createPostBlock(data){
+    const post = createPostBase(data)
+    post.append(...createCommentBlockBase(data))
     postBlock.append(post)
 }
 
@@ -200,7 +319,6 @@ async function getPosts(){
         }
     }).then(res => res.json())
     .then(res => {
-        console.log(res);
         postBlock.innerHTML = ""
         for(let i = 0; i<res.length; i++){
             createPostBlock(res[i])

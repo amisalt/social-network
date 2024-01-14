@@ -18,7 +18,7 @@ router.post("/deleteComment", [
     authCheck
 ], controller.deleteComment)
 
-router.get("/getComments", [
+router.post("/getComments", [
     authCheck
 ], controller.getComments)
 
